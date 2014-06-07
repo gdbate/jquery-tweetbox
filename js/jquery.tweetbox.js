@@ -52,11 +52,10 @@
 					{match:/(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/gi,class:'url'}
 				],
 				action:'tweet',
-				buttons:{
+				button:{
 					tweet:'Tweet',
 					reply:'Tweet Reply'
-				},
-				'info-size':16
+				}
   		},settings);
 	    this.index=count++;
 	    var sourceText=this.settings.default||stripTags($.trim($(this).html().replace(/<br>/g,'\n')));
@@ -78,7 +77,7 @@
 		    $(self).tweetbox('highlight');
 		  },50);
 
-		  this.$button=$('<button class="tweet-box-button">').css({position:'absolute',top:'5px',bottom:'5px',right:'1%',width:'25%',overflow:'hidden'}).html(this.settings.buttons[this.settings.action]).click(function(){
+		  this.$button=$('<button class="tweet-box-button">').css({position:'absolute',top:'5px',bottom:'5px',right:'1%',width:'25%',overflow:'hidden'}).html(this.settings.button[this.settings.action]).click(function(){
 	    	var text=rawText(self.$editor.html(),true)+self.settings.postfix;
     		var avaiable=(self.settings.limit-text.length);
     		if(avaiable<0)$(self).tweetbox('info','<span style="color:red">Please shorten your tweet</span>');
@@ -107,7 +106,7 @@
 			if($.browser.webkit||$.browser.mozilla){
 		  	//console.log('keyCode:',keyCode,'tl:',text.length,'pl:',this.previousText.length,'s:',rSel[0].characterRange.start,'e:',rSel[0].characterRange.end,text);
 	    	if(keyCode&&keyCode==13&&start==0){
-	    		formatted=this.previousText;
+	    		text=this.previousText;
 	    	}else if(keyCode&&keyCode==13&&start==this.previousText.length+1){
 	    		formatted=ltrim(this.previousText)+'\n\n';
 	    	}else{
@@ -115,7 +114,7 @@
 		    	for(var i=0;i<this.settings.highlight.length;i++)
 		    		formatted=formatted.replace(this.settings.highlight[i].match,function(m){return '<span class="'+self.settings.highlight[i].class+'">'+m+'</span>'});
 		    }
-	    	this.$editor.html(formatted);
+	    	this.$editor.html(formatted||text);
 	    	this.previousText=text;
 	    	rangy.getSelection().restoreCharacterRanges(editor,rSel);
 		  }
