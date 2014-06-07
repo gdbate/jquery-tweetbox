@@ -16,10 +16,9 @@
   		.replace(/<br><div>/gi,'\n') //chrome not taking in account white-space:pre
   		.replace(/<div><br><\/div>/gi,'\n') //chrome newline
   		.replace(/<br>&nbsp;/gi,'\n\n') //mozilla newline
-  		//.replace(/<\/p><p><br>|<p><br><\/p><p>/gi,'\n') //ie newlines
   		.replace(/<div>|<br>|<\/p>/gi,'\n'); //html tags
   	if($.browser.msie)
-  		text=text.replace(/\n/g,' ').replace(/\s\s/g,' ').replace(/\s\s/g,' ').replace(/\s\s/g,' ');
+  		text=text.replace(/\n/g,' ').replace(/&nbsp;/g,' ').replace('  ',' ').replace('  ',' ');//ie shit
   	text=trim?$.trim(stripTags(text)):ltrim(stripTags(text));
   	console.log('----------',str,'--',text);
   	return text;
@@ -105,24 +104,29 @@
     	var text;
 
     	var formatted=false;
-			//if($.browser.webkit||$.browser.mozilla){
-		  	//console.log('keyCode:',keyCode,'tl:',text.length,'pl:',this.previousText.length,'s:',rSel[0].characterRange.start,'e:',rSel[0].characterRange.end,text);
-	    	if(keyCode&&keyCode==13&&start==0){
-	    		text=this.previousText;
-	    	}else if(keyCode&&keyCode==13&&start==this.previousText.length+1){
-	    		text=ltrim(this.previousText)+'\n\n';
-	    	}else{
-		    	text=rawText(this.$editor.html());
+	  	//console.log('keyCode:',keyCode,'tl:',text.length,'pl:',this.previousText.length,'s:',rSel[0].characterRange.start,'e:',rSel[0].characterRange.end,text);
+    	if(keyCode&&keyCode==13&&start==0){
+    		text=this.previousText;
+    	}else if(keyCode&&keyCode==13&&start==this.previousText.length+1){
+    		text=ltrim(this.previousText)+'\n\n';
+    	}else{
+	    	text=rawText(this.$editor.html());
+    	}
+    	var avaiable=(this.settings.limit-this.settings.postfix.length-text.length);
+    	if(keyCode&&keyCode==13&&$.browser.msie){
+    		if(start){
+	    		rSel[0].characterRange.start--;
+	    		rSel[0].characterRange.end--;
 	    	}
-	    	var avaiable=(this.settings.limit-this.settings.postfix.length-text.length);
+	    	$(this).tweetbox('info','<span style="color:white">Sorry, multiple lines not supported by IE.</span>');
+	    }else
 	    	$(this).tweetbox('info',avaiable<0?'<span style="color:red">'+avaiable+'</span>':avaiable);
-    		formatted=text;
-	    	for(var i=0;i<this.settings.highlight.length;i++)
-	    		formatted=formatted.replace(this.settings.highlight[i].match,function(m){return '<span class="'+self.settings.highlight[i].class+'">'+m+'</span>'});
-	    	this.$editor.html(formatted||text);
-	    	this.previousText=text;
-	    	rangy.getSelection().restoreCharacterRanges(editor,rSel);
-		  //}
+  		formatted=text;
+    	for(var i=0;i<this.settings.highlight.length;i++)
+    		formatted=formatted.replace(this.settings.highlight[i].match,function(m){return '<span class="'+self.settings.highlight[i].class+'">'+m+'</span>'});
+    	this.$editor.html(formatted||text);
+    	this.previousText=text;
+    	rangy.getSelection().restoreCharacterRanges(editor,rSel);
 		},
 		info:function(text){
 	    this.$info.html(text);
