@@ -11,12 +11,14 @@
 	  return str.replace(/^[ \\s\u00A0 ]+/g,'');
 	}
 
-	function rawText(str){
+	function rawText(str,trim){
   	var text=str
-  		.replace(/<div><br><\/div>/g,'\n') //chrome newline
-  		.replace(/<br>&nbsp;/g,'\n\n') //mozilla newline
-  		.replace(/<div>|<br>|<\/p>/g,'\n'); //html tags
-  	return ltrim(stripTags(text));
+  		.replace(/<div><br><\/div>/gi,'\n') //chrome newline
+  		.replace(/<br>&nbsp;/gi,'\n\n') //mozilla newline
+  		.replace(/<\/p><p><br>|<p><br><\/p><p>/gi,'\n') //ie newlines
+  		.replace(/<div>|<br>|<\/p>/gi,'\n'); //html tags
+  	text=trim?$.trim(stripTags(text)):ltrim(stripTags(text));
+  	return text;
 	}
 
 	var count=0;
@@ -30,7 +32,7 @@
       var args=Array.prototype.slice.call(arguments,1);
 			return this.each(function(){
 				return methods[option].apply(this,args);
-				$.error('Element is not a tweet box plugin');
+				console.error('Element is not a tweet box plugin');
 			});
 		}else console.error('Requested tweet box method not found.',option);
 	};
@@ -60,42 +62,24 @@
 	    var sourceText=this.settings.default||stripTags($.trim($(this).html().replace(/<br>/g,'\n')));
 			if($(this).css('position').toLowerCase()!='absolute')$(this).css('position','relative');
 			var cover={position:'absolute',top:'0px',right:'0px',bottom:'0px',left:'0px'};
-	    if($.browser.webkit||$.browser.mozilla){
-	    	this.previousText=sourceText;
-		    this.$editor=$('<div contenteditable="true" id="editor'+this.index+'" class="tweet-box-editable">').css(this.settings.css).css(cover).css({bottom:'40px',left:'0px','z-index':'99','overflow-x':'hidden','overflow-y':'auto','white-space':'pre'});
-		    $(this).css({overflow:'hidden',padding:'0px'}).html(this.$editor);
-		    this.$editor.focus();
+    	this.previousText=rawText(sourceText);
+	    this.$editor=$('<div contenteditable="true" id="editor'+this.index+'" class="tweet-box-editable">').css(this.settings.css).css(cover).css({bottom:'40px',left:'0px','z-index':'99','overflow-x':'hidden','overflow-y':'auto','white-space':'pre'});
+	    $(this).css({overflow:'hidden',padding:'0px'}).html(this.$editor);
 
-		    this.$editor.bind('keyup',function(e){
-		    	$(self).tweetbox('highlight',e.which);
-		    });
-		    this.$editor.bind('mouseup',function(e){
-		    	$(self).tweetbox('highlight');
-		    });
+	    this.$editor.bind('keyup',function(e){
+	    	$(self).tweetbox('highlight',e.which);
+	    });
+	    this.$editor.bind('mouseup',function(e){
+	    	$(self).tweetbox('highlight');
+	    });
 
-		    setTimeout(function(){
-			    $('#editor'+self.index).focus();
-			    $(self).tweetbox('highlight');
-			  },25);
+	    setTimeout(function(){
+		    self.$editor.focus();
+		    $(self).tweetbox('highlight');
+		  },50);
 
-			}else{
-		    this.$editor=$('<textarea id="editor'+this.index+'" class="tweet-box-editable">').css(this.settings.css).css({width:'100%',height:'100%'});
-
-		    this.$editor.focus();
-		    this.$editor.bind('keyup mouseup',function(e){
-		    	var text=rawText(self.$editor.html()+self.settings.postfix);
-	    		var avaiable=(self.settings.limit-text.length);
-		    	$(self).tweetbox('info',avaiable<0?'<span style="color:red">'+avaiable+'</span>':avaiable);
-		    });
-
-				this.$placement=$('<div>').css(cover).css({bottom:'40px',left:'0px','z-index':'99','overflow':'hidden'}).html(this.$editor);
-		    $(this).css({overflow:'hidden',padding:'0px'}).html(this.$placement);
-		    setTimeout(function(){
-			    $('#editor'+self.index).focus();
-			  },10);
-			}
 		  this.$button=$('<button class="tweet-box-button">').css({position:'absolute',top:'5px',bottom:'5px',right:'1%',width:'25%',overflow:'hidden'}).html(this.settings.buttons[this.settings.action]).click(function(){
-	    	var text=rawText(self.$editor.html()+self.settings.postfix);
+	    	var text=rawText(self.$editor.html(),true)+self.settings.postfix;
     		var avaiable=(self.settings.limit-text.length);
     		if(avaiable<0)$(self).tweetbox('info','<span style="color:red">Please shorten your tweet</span>');
     		else if(typeof self.settings.cb=='function') self.settings.cb(text);
@@ -103,6 +87,7 @@
 		  this.$info=$('<div class="tweet-box-info">').css({position:'absolute',top:'5px',left:'1%',width:'72%',top:'50%','text-align':'right',display:'table-cell','vertical-align':'middle'}).html('X Characters Left');
 		  this.$bottom=$('<div class="tweet-box-bottom">').css(cover).css({top:'auto',height:'40px','z-index':'100','overflow':'hidden'}).append(this.$button,this.$info);
 		  $(this).append(this.$bottom)
+
 		  var size=this.$info.css('font-size');
 		  if(size.substr(-2)=='px')size=size.substr(0,size.length-2);
 		  this.$info.css('margin-top','-'+Math.round(+size/2)+'px');
@@ -112,22 +97,28 @@
 			var self=this;
 			var editor=this.$editor.get()[0];
     	var rSel=rangy.getSelection().saveCharacterRanges(editor);
+    	var start=rSel[0].characterRange.start;
+    	var end=rSel[0].characterRange.end;
     	var text=rawText(this.$editor.html())
-    	var size=text.length;
-    	var avaiable=(this.settings.limit-this.settings.postfix.length-size);
+    	var avaiable=(this.settings.limit-this.settings.postfix.length-text.length);
     	$(this).tweetbox('info',avaiable<0?'<span style="color:red">'+avaiable+'</span>':avaiable);
 
-    	if(keyCode&&keyCode==13&&rSel[0].characterRange.start==0){
-    		text=this.previousText;
-    	}else if(keyCode&&keyCode==13&&rSel[0].characterRange.start==this.previousText.length+1){
-    		text=$.trim(this.previousText)+'\n\n';
-    	}else{
-	    	for(var i=0;i<this.settings.highlight.length;i++)
-	    		text=text.replace(this.settings.highlight[i].match,function(m){return '<span class="'+self.settings.highlight[i].class+'">'+m+'</span>'});
-	    }
-    	this.$editor.html(text);
-    	this.previousText=text;
-    	rangy.getSelection().restoreCharacterRanges(editor,rSel);
+    	var formatted=false;
+			if($.browser.webkit||$.browser.mozilla){
+		  	//console.log('keyCode:',keyCode,'tl:',text.length,'pl:',this.previousText.length,'s:',rSel[0].characterRange.start,'e:',rSel[0].characterRange.end,text);
+	    	if(keyCode&&keyCode==13&&start==0){
+	    		formatted=this.previousText;
+	    	}else if(keyCode&&keyCode==13&&start==this.previousText.length+1){
+	    		formatted=ltrim(this.previousText)+'\n\n';
+	    	}else{
+	    		formatted=text;
+		    	for(var i=0;i<this.settings.highlight.length;i++)
+		    		formatted=formatted.replace(this.settings.highlight[i].match,function(m){return '<span class="'+self.settings.highlight[i].class+'">'+m+'</span>'});
+		    }
+	    	this.$editor.html(formatted);
+	    	this.previousText=text;
+	    	rangy.getSelection().restoreCharacterRanges(editor,rSel);
+		  }
 		},
 		info:function(text){
 	    this.$info.html(text);
